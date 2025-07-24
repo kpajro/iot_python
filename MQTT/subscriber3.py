@@ -18,18 +18,24 @@ def on_connect(client, userdata, flags, reason_code, properties):
 def on_message(client, userdata, msg):
     try:
         topic_parts = msg.topic.split("/")
-        sensor_type = topic_parts[-1]
+        sensor_id = topic_parts[1]
+        sensor_type = topic_parts[2]
         value = float(msg.payload.decode())
-        
-        print(f"Recu: {sensor_type} = {value}")
-        
+
+        cursor.execute("SELECT * FROM sensors WHERE sensor_id=%s", (sensor_id,))
+        if cursor.fetchone() is None:
+            cursor.execute(
+                "INSERT INTO sensors (sensor_id, type, latitude, longitude) VALUES (%s, %s, %s, %s)",
+                (sensor_id, sensor_type, 55.23, 3.91)
+            )
+
         cursor.execute(
-            "INSERT INTO sensor_readings (type, value) VALUES (%s, %s)",
-            (sensor_type, value)
+            "INSERT INTO sensor_readings (sensor_id, type, value) VALUES (%s, %s, %s)",
+            (sensor_id, sensor_type, value)
         )
         db.commit()
     except Exception as e:
-        print("erreur au moment de l'envoi", e)
+        print("Erreur :", e)
 
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
